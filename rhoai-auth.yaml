@@ -1,0 +1,19 @@
+---
+apiVersion: user.openshift.io/v1
+kind: Group
+metadata:
+  name: rhods-admins
+users:
+  - admin
+---
+apiVersion: services.platform.opendatahub.io/v1alpha1
+kind: Auth
+metadata:
+  name: auth
+spec:
+  adminGroups:
+    - rhods-admins
+  allowedGroups:
+    - project-a-user-group
+    - project-b-user-group
+    - project-c-user-group

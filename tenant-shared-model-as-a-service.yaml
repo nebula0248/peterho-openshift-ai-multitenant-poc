@@ -1,0 +1,48 @@
+---
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: ai-shared-model-as-a-service
+  labels:
+    tenant: shared
+    app.kubernetes.io/part-of: ai-poc
+    opendatahub.io/dashboard: "true"
+  annotations:
+    openshift.io/display-name: "Model-as-a-Service Shared Tenant"
+    openshift.io/description: "Shared MaaS tenant accessible by all data science tenants"
+---
+# Optional: give all tenant groups read-only visibility into the shared MaaS
+# tenant (they consume it over the network; view access helps discover endpoints)
+apiVersion: rbac.authorization.k8s.io/v1
+kind: RoleBinding
+metadata:
+  name: tenants-view-shared-maas
+  namespace: ai-shared-model-as-a-service
+  labels:
+    opendatahub.io/dashboard: "true"
+subjects:
+  - kind: Group
+    name: project-a-user-group
+    apiGroup: rbac.authorization.k8s.io
+  - kind: Group
+    name: project-b-user-group
+    apiGroup: rbac.authorization.k8s.io
+  - kind: Group
+    name: project-c-user-group
+    apiGroup: rbac.authorization.k8s.io
+roleRef:
+  kind: ClusterRole
+  name: view
+  apiGroup: rbac.authorization.k8s.io
+---
+apiVersion: v1
+kind: ResourceQuota
+metadata:
+  name: shared-maas-quota
+  namespace: ai-shared-model-as-a-service
+spec:
+  hard:
+    requests.nvidia.com/gpu: "0"
+    requests.nvidia.com/mig-4g.96gb: "0"
+    requests.nvidia.com/mig-2g.48gb: "1"
+    requests.nvidia.com/mig-1g.24gb: "2"

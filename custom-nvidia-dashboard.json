@@ -1,0 +1,227 @@
+{
+  "annotations": { "list": [] },
+  "editable": true,
+  "gnetId": null,
+  "graphTooltip": 0,
+  "id": null,
+  "links": [],
+  "rows": [
+    {
+      "collapse": false,
+      "height": "100px",
+      "title": "Overview Counts",
+      "showTitle": true,
+      "panels": [
+        {
+          "type": "singlestat", "title": "Physical GPUs", "id": 101, "span": 6,
+          "datasource": null, "format": "none", "valueName": "current", "valueFontSize": "200%",
+          "sparkline": { "show": false },
+          "targets": [
+            { "expr": "count(count by (hostname, gpu) (DCGM_FI_DEV_GPU_TEMP{hostname=~\"$node\", gpu=~\"$gpu\"}))", "instant": true, "refId": "A" }
+          ]
+        },
+        {
+          "type": "singlestat", "title": "MIG Partitions", "id": 102, "span": 6,
+          "datasource": null, "format": "none", "valueName": "current", "valueFontSize": "200%",
+          "sparkline": { "show": false },
+          "targets": [
+            { "expr": "count(count by (hostname, gpu, GPU_I_ID) (DCGM_FI_DEV_FB_USED{hostname=~\"$node\", gpu=~\"$gpu\", GPU_I_ID!=\"\"})) OR on() vector(0)", "instant": true, "refId": "A" }
+          ]
+        }
+      ]
+    },
+    {
+      "collapse": false,
+      "height": "100px",
+      "title": "Overview Health",
+      "showTitle": true,
+      "panels": [
+        {
+          "type": "singlestat", "title": "VRAM In Use (Total)", "id": 103, "span": 4,
+          "datasource": null, "format": "decmbytes", "valueName": "current", "valueFontSize": "200%",
+          "sparkline": { "show": true },
+          "targets": [
+            { "expr": "sum(avg by (hostname, gpu, GPU_I_ID) (DCGM_FI_DEV_FB_USED{hostname=~\"$node\", gpu=~\"$gpu\"}))", "refId": "A" }
+          ]
+        },
+        {
+          "type": "singlestat", "title": "Avg GPU Temperature", "id": 104, "span": 4,
+          "datasource": null, "format": "celsius", "valueName": "current", "valueFontSize": "200%",
+          "sparkline": { "show": true },
+          "targets": [
+            { "expr": "avg(avg by (hostname, gpu) (DCGM_FI_DEV_GPU_TEMP{hostname=~\"$node\", gpu=~\"$gpu\"}))", "refId": "A" }
+          ]
+        },
+        {
+          "type": "singlestat", "title": "Total Power Draw (Watt)", "id": 105, "span": 4,
+          "datasource": null, "format": "watt", "valueName": "current", "valueFontSize": "200%",
+          "sparkline": { "show": true },
+          "targets": [
+            { "expr": "sum(avg by (hostname, gpu) (DCGM_FI_DEV_POWER_USAGE{hostname=~\"$node\", gpu=~\"$gpu\"}))", "refId": "A" }
+          ]
+        }
+      ]
+    },
+    {
+      "collapse": false,
+      "height": "500px",
+      "title": "Workload Allocation",
+      "showTitle": true,
+      "panels": [
+        {
+          "type": "table", "title": "GPU / MIG Inventory and Pod Assignment (empty Pod = unallocated)", "id": 201, "span": 12,
+          "datasource": null, "transform": "table",
+          "styles": [
+            { "alias": "Time", "pattern": "Time", "type": "hidden" },
+            { "alias": "", "pattern": "GPU_I_ID", "type": "hidden" },
+            { "alias": "Node", "pattern": "hostname", "type": "string" },
+            { "alias": "Card Model", "pattern": "modelName", "type": "string" },
+            { "alias": "GPU", "pattern": "gpu", "type": "string" },
+            { "alias": "MIG Profile", "pattern": "GPU_I_PROFILE", "type": "string" },
+            { "alias": "Namespace", "pattern": "exported_namespace", "type": "string" },
+            { "alias": "Pod", "pattern": "exported_pod", "type": "string" },
+            { "alias": "VRAM Used %", "pattern": "Value #A", "type": "number", "unit": "percent", "decimals": 1 },
+            { "alias": "Compute Util %", "pattern": "Value #B", "type": "number", "unit": "percent", "decimals": 1 }
+          ],
+          "targets": [
+            {
+              "expr": "100 * avg by (hostname, modelName, gpu, GPU_I_PROFILE, GPU_I_ID, exported_namespace, exported_pod, exported_container) (DCGM_FI_DEV_FB_USED{hostname=~\"$node\", gpu=~\"$gpu\"} / (DCGM_FI_DEV_FB_USED{hostname=~\"$node\", gpu=~\"$gpu\"} + DCGM_FI_DEV_FB_FREE{hostname=~\"$node\", gpu=~\"$gpu\"}))",
+              "format": "table", "instant": true, "refId": "A"
+            },
+            {
+              "expr": "100 * avg by (hostname, modelName, gpu, GPU_I_PROFILE, GPU_I_ID, exported_namespace, exported_pod, exported_container) (DCGM_FI_PROF_GR_ENGINE_ACTIVE{hostname=~\"$node\", gpu=~\"$gpu\"})",
+              "format": "table", "instant": true, "refId": "B"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "collapse": false,
+      "height": "300px",
+      "title": "Physical Card Health",
+      "showTitle": true,
+      "panels": [
+        {
+          "type": "graph", "title": "Temperature", "id": 301, "span": 4,
+          "datasource": null, "lines": true, "fill": 1, "linewidth": 2, "nullPointMode": "null",
+          "targets": [
+            { "expr": "avg by (hostname, gpu, modelName) (DCGM_FI_DEV_GPU_TEMP{hostname=~\"$node\", gpu=~\"$gpu\"})", "legendFormat": "{{hostname}} GPU {{gpu}}", "refId": "A" }
+          ],
+          "yaxes": [ { "format": "celsius", "min": 0, "show": true }, { "format": "short", "show": false } ],
+          "xaxis": { "mode": "time", "show": true }
+        },
+        {
+          "type": "graph", "title": "Power Draw", "id": 302, "span": 4,
+          "datasource": null, "lines": true, "fill": 1, "linewidth": 2, "nullPointMode": "null",
+          "targets": [
+            { "expr": "avg by (hostname, gpu, modelName) (DCGM_FI_DEV_POWER_USAGE{hostname=~\"$node\", gpu=~\"$gpu\"})", "legendFormat": "{{hostname}} GPU {{gpu}}", "refId": "A" }
+          ],
+          "yaxes": [ { "format": "watt", "min": 0, "show": true }, { "format": "short", "show": false } ],
+          "xaxis": { "mode": "time", "show": true }
+        },
+        {
+          "type": "graph", "title": "SM Clock", "id": 303, "span": 4,
+          "datasource": null, "lines": true, "fill": 1, "linewidth": 2, "nullPointMode": "null",
+          "targets": [
+            { "expr": "avg by (hostname, gpu, modelName) (DCGM_FI_DEV_SM_CLOCK{hostname=~\"$node\", gpu=~\"$gpu\"}) * 1000000", "legendFormat": "{{hostname}} GPU {{gpu}}", "refId": "A" }
+          ],
+          "yaxes": [ { "format": "hertz", "min": 0, "show": true }, { "format": "short", "show": false } ],
+          "xaxis": { "mode": "time", "show": true }
+        }
+      ]
+    },
+    {
+      "collapse": false,
+      "height": "300px",
+      "title": "Compute per GPU / MIG Partition",
+      "showTitle": true,
+      "panels": [
+        {
+          "type": "graph", "title": "Compute Utilization (Graphics Engine Active)", "id": 401, "span": 6,
+          "datasource": null, "lines": true, "fill": 1, "linewidth": 2, "nullPointMode": "null",
+          "targets": [
+            { "expr": "avg by (hostname, gpu) (DCGM_FI_PROF_GR_ENGINE_ACTIVE{hostname=~\"$node\", gpu=~\"$gpu\", GPU_I_ID=\"\"})", "legendFormat": "{{hostname}} GPU {{gpu}} whole card", "refId": "A" },
+            { "expr": "avg by (hostname, gpu, GPU_I_PROFILE, GPU_I_ID) (DCGM_FI_PROF_GR_ENGINE_ACTIVE{hostname=~\"$node\", gpu=~\"$gpu\", GPU_I_ID!=\"\"})", "legendFormat": "{{hostname}} GPU {{gpu}} MIG {{GPU_I_PROFILE}} #{{GPU_I_ID}}", "refId": "B" }
+          ],
+          "yaxes": [ { "format": "percentunit", "min": 0, "max": 1, "show": true }, { "format": "short", "show": false } ],
+          "xaxis": { "mode": "time", "show": true }
+        },
+        {
+          "type": "graph", "title": "Tensor Core Utilization", "id": 402, "span": 6,
+          "datasource": null, "lines": true, "fill": 1, "linewidth": 2, "nullPointMode": "null",
+          "targets": [
+            { "expr": "avg by (hostname, gpu) (DCGM_FI_PROF_PIPE_TENSOR_ACTIVE{hostname=~\"$node\", gpu=~\"$gpu\", GPU_I_ID=\"\"})", "legendFormat": "{{hostname}} GPU {{gpu}} whole card", "refId": "A" },
+            { "expr": "avg by (hostname, gpu, GPU_I_PROFILE, GPU_I_ID) (DCGM_FI_PROF_PIPE_TENSOR_ACTIVE{hostname=~\"$node\", gpu=~\"$gpu\", GPU_I_ID!=\"\"})", "legendFormat": "{{hostname}} GPU {{gpu}} MIG {{GPU_I_PROFILE}} #{{GPU_I_ID}}", "refId": "B" }
+          ],
+          "yaxes": [ { "format": "percentunit", "min": 0, "max": 1, "show": true }, { "format": "short", "show": false } ],
+          "xaxis": { "mode": "time", "show": true }
+        }
+      ]
+    },
+    {
+      "collapse": false,
+      "height": "300px",
+      "title": "Memory per GPU / MIG Partition",
+      "showTitle": true,
+      "panels": [
+        {
+          "type": "graph", "title": "VRAM Used", "id": 403, "span": 12,
+          "datasource": null, "lines": true, "fill": 1, "linewidth": 2, "nullPointMode": "null",
+          "targets": [
+            { "expr": "avg by (hostname, gpu) (DCGM_FI_DEV_FB_USED{hostname=~\"$node\", gpu=~\"$gpu\", GPU_I_ID=\"\"})", "legendFormat": "{{hostname}} GPU {{gpu}} whole card", "refId": "A" },
+            { "expr": "avg by (hostname, gpu, GPU_I_PROFILE, GPU_I_ID) (DCGM_FI_DEV_FB_USED{hostname=~\"$node\", gpu=~\"$gpu\", GPU_I_ID!=\"\"})", "legendFormat": "{{hostname}} GPU {{gpu}} MIG {{GPU_I_PROFILE}} #{{GPU_I_ID}}", "refId": "B" }
+          ],
+          "yaxes": [ { "format": "decmbytes", "min": 0, "show": true }, { "format": "short", "show": false } ],
+          "xaxis": { "mode": "time", "show": true }
+        }
+      ]
+    }
+  ],
+  "refresh": "30s",
+  "schemaVersion": 14,
+  "style": "dark",
+  "tags": ["nvidia-gpu"],
+  "templating": {
+    "list": [
+      {
+        "allValue": null,
+        "current": {},
+        "datasource": null,
+        "hide": 0,
+        "includeAll": true,
+        "label": "Node",
+        "multi": true,
+        "name": "node",
+        "options": [],
+        "query": "label_values(DCGM_FI_DEV_GPU_TEMP, hostname)",
+        "refresh": 2,
+        "regex": "",
+        "sort": 1,
+        "type": "query"
+      },
+      {
+        "allValue": null,
+        "current": {},
+        "datasource": null,
+        "hide": 0,
+        "includeAll": true,
+        "label": "GPU",
+        "multi": true,
+        "name": "gpu",
+        "options": [],
+        "query": "label_values(DCGM_FI_DEV_GPU_TEMP{hostname=~\"$node\"}, gpu)",
+        "refresh": 2,
+        "regex": "",
+        "sort": 1,
+        "type": "query"
+      }
+    ]
+  },
+  "time": { "from": "now-1h", "to": "now" },
+  "timepicker": {},
+  "timezone": "",
+  "title": "NVIDIA GPU Infrastructure",
+  "uid": "gpu-infra-dcgm",
+  "version": 2
+}

@@ -1,0 +1,163 @@
+---
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: ai-data-science-tenant-b
+  labels:
+    tenant: tenant-b
+    app.kubernetes.io/part-of: ai-poc
+    opendatahub.io/dashboard: "true"
+  annotations:
+    openshift.io/display-name: "Project B"
+    openshift.io/description: "Data science tenant B"
+---
+apiVersion: user.openshift.io/v1
+kind: Group
+metadata:
+  name: project-b-user-group
+users:
+  - user3
+---
+# Project B: user group gets edit access to tenant-b only
+apiVersion: rbac.authorization.k8s.io/v1
+kind: RoleBinding
+metadata:
+  name: project-b-user-group-edit
+  namespace: ai-data-science-tenant-b
+  labels:
+    opendatahub.io/dashboard: "true"
+subjects:
+  - kind: Group
+    name: project-b-user-group
+    apiGroup: rbac.authorization.k8s.io
+roleRef:
+  kind: ClusterRole
+  name: edit
+  apiGroup: rbac.authorization.k8s.io
+---
+# Project B: user group gets monitoring rules view access to tenant-b only
+apiVersion: rbac.authorization.k8s.io/v1
+kind: RoleBinding
+metadata:
+  name: project-b-user-group-monitoring-rules-view
+  namespace: ai-data-science-tenant-b
+  labels:
+    opendatahub.io/dashboard: "true"
+subjects:
+  - kind: Group
+    name: project-b-user-group
+    apiGroup: rbac.authorization.k8s.io
+roleRef:
+  kind: ClusterRole
+  name: monitoring-rules-view
+  apiGroup: rbac.authorization.k8s.io
+---
+apiVersion: v1
+kind: ResourceQuota
+metadata:
+  name: tenant-b-quota
+  namespace: ai-data-science-tenant-b
+spec:
+  hard:
+    requests.cpu: "16"
+    limits.cpu: "16"
+    requests.memory: 32Gi
+    limits.memory: 64Gi
+    requests.storage: 50Gi
+    persistentvolumeclaims: "10"
+    requests.nvidia.com/gpu: "0"
+    requests.nvidia.com/mig-4g.96gb: "0"
+    requests.nvidia.com/mig-2g.48gb: "0"
+    requests.nvidia.com/mig-1g.24gb: "1"
+---
+apiVersion: v1
+kind: LimitRange
+metadata:
+  name: tenant-b-limits
+  namespace: ai-data-science-tenant-b
+spec:
+  limits:
+    - type: Container
+      default:
+        cpu: "1"
+        memory: 2Gi
+      defaultRequest:
+        cpu: 250m
+        memory: 512Mi
+---
+############################################
+# TENANT B — deny all, allow same-ns, router, monitoring
+############################################
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: deny-all-ingress
+  namespace: ai-data-science-tenant-b
+spec:
+  podSelector: {}
+  policyTypes:
+    - Ingress
+---
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: allow-same-namespace
+  namespace: ai-data-science-tenant-b
+spec:
+  podSelector: {}
+  ingress:
+    - from:
+        - podSelector: {}
+  policyTypes:
+    - Ingress
+---
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: allow-openshift-ingress
+  namespace: ai-data-science-tenant-b
+spec:
+  podSelector: {}
+  ingress:
+    - from:
+        - namespaceSelector:
+            matchLabels:
+              network.openshift.io/policy-group: ingress
+  policyTypes:
+    - Ingress
+---
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: allow-openshift-monitoring
+  namespace: ai-data-science-tenant-b
+spec:
+  podSelector: {}
+  ingress:
+    - from:
+        - namespaceSelector:
+            matchLabels:
+              network.openshift.io/policy-group: monitoring
+  policyTypes:
+    - Ingress
+---
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: allow-from-rhoai-system
+  namespace: ai-data-science-tenant-b
+spec:
+  podSelector: {}
+  ingress:
+    - from:
+        - namespaceSelector:
+            matchLabels:
+              kubernetes.io/metadata.name: redhat-ods-applications
+        - namespaceSelector:
+            matchLabels:
+              kubernetes.io/metadata.name: redhat-ods-monitoring
+        - namespaceSelector:
+            matchLabels:
+              kubernetes.io/metadata.name: redhat-ods-operator
+  policyTypes:
+    - Ingress
